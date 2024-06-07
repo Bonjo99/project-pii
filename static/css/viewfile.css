@@ -1,0 +1,11 @@
+#file-viewer {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+}
+#file-viewer h1, #file-viewer h2, #file-viewer h3 {
+    color: #444;
+}
+#file-viewer p {
+    margin-bottom: 1em;
+}

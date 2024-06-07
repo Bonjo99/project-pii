@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View File</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <link rel="stylesheet" href="/static/css/viewfile.css">
+</head>
+<body>
+    <div id="file-viewer"></div>
+    <script>
+        const fileData = '{{ file_data }}';
+        const fileExtension = '{{ file_extension }}';
+
+        if (fileExtension === '.pdf') {
+            const pdfData = atob(fileData);
+            const loadingTask = pdfjsLib.getDocument({data: pdfData});
+            loadingTask.promise.then(function(pdf) {
+                pdf.getPage(1).then(function(page) {
+                    const scale = 1.5;
+                    const viewport = page.getViewport({ scale: scale });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    document.getElementById('file-viewer').appendChild(canvas);
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                });
+            });
+        } else if (fileExtension === '.docx') {
+            const arrayBuffer = Uint8Array.from(atob(fileData), c => c.charCodeAt(0)).buffer;
+            mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                .then(displayResult)
+                .catch(handleError);
+
+            function displayResult(result) {
+                document.getElementById('file-viewer').innerHTML = result.value;
+            }
+
+            function handleError(err) {
+                console.log(err);
+            }
+        }
+    </script>
+</body>
+</html>
