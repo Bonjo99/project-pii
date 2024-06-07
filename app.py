@@ -521,5 +521,6 @@ def view_file(user, name):
     else:
         return "Invalid request method", 405
 
+app.logger.setLevel(logging.DEBUG)
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
