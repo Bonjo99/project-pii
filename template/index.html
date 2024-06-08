@@ -13,11 +13,17 @@
       flex-direction: column;
       min-height: 100vh;
       margin: 0;
+      position: relative;
     }
     header {
-      background-color: #343a40;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
       color: white;
       padding: 10px 20px;
+      background-color: transparent;
+      text-align: left;
     }
     .content {
       flex: 1;
@@ -29,7 +35,7 @@
       padding: 20px;
     }
     footer {
-      background-color: #343a40;
+      background-color: transparent;
       color: white;
       text-align: center;
       padding: 10px 20px;
@@ -45,7 +51,7 @@
       font-family: monospace;
       overflow: hidden;
       white-space: nowrap;
-      border-right: 0.15em solid rgb(47, 130, 255);
+      border-right: 0.15em solid rgb(44 53 57);
       width: 13ch; /* Adjust based on text length */
       animation: typing 3.5s steps(13, end) forwards, blink-caret 0.75s step-end infinite;
     }
@@ -53,18 +59,18 @@
 </head>
 <body>
   <header>
-    <h1 class="typing-effect">Pii Converter</h1>
+    <h1 class="typing-effect">Pii Detection</h1>
   </header>
 
   <div class="content">
-    <h2>Controlla se i tuoi documenti sono sicuri</h2>
-    <a href="/sign_in"><button class="animated-button">
+    <h2>Check your documents</h2>
+    <a href="/sign_up"><button class="animated-button">
 		<svg viewBox="0 0 24 24" class="arr-2" xmlns="http://www.w3.org/2000/svg">
 		  <path
 			d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"
 		  ></path>
 		</svg>
-		<span class="text">Controlla Ora</span>
+		<span class="text">Check Now</span>
 		<span class="circle"></span>
 		<svg viewBox="0 0 24 24" class="arr-1" xmlns="http://www.w3.org/2000/svg">
 		  <path

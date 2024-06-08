@@ -7,9 +7,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
     <link rel="stylesheet" href="/static/css/viewfile.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
 </head>
 <body>
-    <div id="file-viewer"></div>
+    <nav class="navbar navbar-dark bg-dark">
+        <span class="navbar-brand mb-0 h1">{{ file_name }}</span>
+    </nav>
+    <div id="file-viewer" style="padding: 20px;"></div>
     <script>
         const fileData = '{{ file_data }}';
         const fileExtension = '{{ file_extension }}';

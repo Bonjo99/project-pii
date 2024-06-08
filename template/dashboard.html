@@ -66,15 +66,15 @@
                                 <div class="card-body">
                                     <h5 class="card-title">
                                         {{i.name[0:10]}}{% if i.name|length > 10 %}...{% endif %}
-                                        <button class="block-btn info-btn" onclick="showInfo('{{i.name}}', '{{i.size}}')">
+                                        <button class="btn btn-info btn-sm rounded-circle" style="background-color: gray;" onclick="showInfo('{{i.name}}', '{{i.size}}')">
                                             <i class="fas fa-info-circle"></i>
                                         </button>
                                     </h5>
-                                    <a href="/delete/{{username}}/{{i.name}}" class="btn btn-danger">Delete</a>
-                                    <a href="/download/{{username}}/name/{{i.name}}" class="btn btn-primary">Download</a>
-                                    <a href="/view/{{username}}/name/{{i.name}}" class="btn btn-info">View</a>
+                                    <a href="/delete/{{username}}/{{i.name}}" class="btn btn-danger btn-sm">Delete</a>
+                                    <a href="/download/{{username}}/name/{{i.name}}" class="btn btn-primary btn-sm">Download</a>
+                                    <a href="/view/{{username}}/name/{{i.name}}" class="btn btn-info btn-sm">View</a>
                                     <form method="GET" action="/convert/{{username}}/name/{{i.name}}">
-                                        <button type="submit" class="btn btn-secondary">Convert File</button>
+                                        <button type="submit" class="btn btn-secondary btn-sm">Convert</button>
                                     </form>
                                 </div>
                             </div>

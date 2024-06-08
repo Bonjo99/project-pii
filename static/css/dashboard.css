@@ -1,13 +1,36 @@
+body {
+    background-color: #333; /* colore di sfondo nero */
+    color: #fff; /* testo bianco */
+}
 .btn {
     transition: all 0.3s ease;
+    color: #fff;
 }
 
 .btn:hover {
     transform: scale(1.1);
 }
+.modal-content {
+    background-color: #555; /* colore di sfondo grigio scuro per i modali */
+    color: #fff; /* testo bianco */
+}
 
+.modal-header {
+    border-bottom: 1px solid #999; /* bordo grigio chiaro per l'intestazione del modal */
+}
+
+.modal-title {
+    color: #fff; /* testo bianco per il titolo del modal */
+}
+
+.modal-body {
+    background-color: #444; /* colore di sfondo grigio scuro per il corpo del modal */
+    color: #fff; /* testo bianco */
+}
 .card {
     transition: all 0.3s ease;
+    background-color: #555; /* colore di sfondo grigio scuro per le card */
+    color: #fff; /* testo bianco */
 }
 
 .card:hover {

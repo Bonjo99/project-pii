@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="shortcut icon" href="/static/images/ic.png">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/signin.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Choose Username</title>
+</head>
+<body class="text-center">
+
+    <div class="container">
+        <form class="form-signin" method="POST" action="/choose_username">
+            <div class="head">
+                <span>Please choose a username</span>
+                <p>Enter your desired username.</p>
+            </div>
+            <div class="inputs">
+                <input type="text" id="inputUsername" class="form-control" placeholder="Username" required autofocus name="username">
+            </div>
+            <button class="btn btn-lg btn-primary btn-block" type="submit">Choose Username</button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript">
+        if ("{{message}}" != "") {
+            alert("{{message}}")
+        }
+    </script>
+    <script type="text/javascript" src="/static/script/signin.ui.js"></script>
+</body>
+</html>

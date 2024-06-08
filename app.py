@@ -14,6 +14,7 @@ from werkzeug.utils import secure_filename
 import tempfile
 import io 
 from reportlab.pdfgen import canvas
+from PyPDF2 import PdfReader, PdfWriter
 import pdfplumber
 from docx import Document
 import docx
@@ -29,9 +30,13 @@ import os
 from argon2 import PasswordHasher
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import base64
+from requests_oauthlib import OAuth2Session
+import json
+import fitz
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
@@ -39,12 +44,14 @@ app.secret_key = os.urandom(24)
 app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Replace with your Google Client ID
 app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  # Replace with your Google Client Secret
 google_bp = make_google_blueprint(
-    scope=["profile", "email"],
-    redirect_to="google_login"  # Specifica l'endpoint dove gestisci il callback di OAuth
+    client_id=app.config["GOOGLE_OAUTH_CLIENT_ID"],
+    client_secret=app.config["GOOGLE_OAUTH_CLIENT_SECRET"],
+    scope=["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "openid"],
+    redirect_to="google_login"  # Specifies the endpoint where you handle the OAuth callback
 )
+
 app.register_blueprint(google_bp, url_prefix="/login")
-
-
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 bcrypt = Bcrypt(app)
 connection_string = "DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net"
 language_key = "ef9d0971353548fbaa27880a6cfc1039"
@@ -114,22 +121,72 @@ def is_valid_username(username):
 def google_login():
     if not google.authorized:
         return redirect(url_for("google.login"))
+
     response = google.get("/oauth2/v2/userinfo")
     if response.ok:
         google_data = response.json()
-        # Ora hai i dati dell'utente da Google, registralo nel tuo database se non è già presente.
-        # Esempio:
-        # user_data = {
-        #     "username": google_data["email"], # Puoi usare l'email come username
-        #     "email": google_data["email"],
-        #     "name": google_data["name"]
-        # }
-        # Registra l'utente nel database e reindirizzalo alla dashboard o alla pagina di benvenuto.
-        return redirect(url_for("dashboard"))
-    else:
-        # Gestisci l'errore di accesso a Google
-        return "Error accessing Google data"
+        email = google_data["email"]
+        name = google_data["name"]
 
+        # Check if the user exists
+        try:
+            conn = create_conn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Users WHERE email = %s", (email,))
+            account = cursor.fetchone()
+
+            if account:
+                # User exists, log them in
+                session['username'] = account[0]  # Assuming the first column is the username
+                session['email'] = account[2]  # Assuming the third column is the email
+                return redirect(url_for("dashboard"))
+            else:
+                # User does not exist, redirect them to choose a username
+                session['email'] = email
+                session['name'] = name
+                return redirect(url_for("choose_username"))
+
+        except Exception as e:
+            return str(e)  # You should handle the error more gracefully in production
+
+    return "Error accessing Google data"
+
+@app.route("/choose_username", methods=["GET", "POST"])
+def choose_username():
+    if request.method == 'POST':
+        username = request.form["username"]
+        # Check if the username is taken
+        try:
+            conn = create_conn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM Users WHERE username = %s", (username,))
+            account = cursor.fetchone()
+
+            if account:
+                # Username is taken, show an error message
+                flash("Username is already taken", "error")
+            else:
+                # Username is available, create a new user
+                password = bcrypt.generate_password_hash(os.urandom(24)).decode('utf-8')
+                cursor.execute("INSERT INTO Users (username, password, email, nome_utente) VALUES (%s, %s, %s, %s)",
+                               (username, password, session['email'], session['name']))
+                conn.commit()
+                cursor.close()
+                conn.close()
+
+                # Create a new container for the user
+                blob_service_client.create_container(username)
+
+                session['username'] = username
+                return redirect(url_for("dashboard"))
+
+        except Exception as e:
+            return str(e)  # You should handle the error more gracefully in production
+
+    return render_template("choose_username.html")
+
+
+#funzionante
 @app.route("/sign_up", methods=["GET","POST"])
 def sign_up():
     if request.method == 'POST':
@@ -260,7 +317,7 @@ def upload(user):
                 conn = create_conn()
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO documents (document_name, username, metadata) VALUES (%s, %s, %s)",
+                    "INSERT INTO document (document_name, username, metadata) VALUES (%s, %s, %s)",
                     (document_name, user, metadata_json)
                 )
                 conn.commit()
@@ -275,82 +332,111 @@ def upload(user):
 
         files = [{"name": blob.name, "size": str(round(blob.size / 1024 / 1024)) + " mb"} for blob in container_client.list_blobs()]
         space = sum([blob.size for blob in container_client.list_blobs()]) / 1024 / 1024
+        print("File uploaded con confidence",confidence_score)
         flash("Privacy Risk Level: " + confidence_score)
         return redirect(url_for('dashboard', username=user))
     else:
         return "Invalid request method", 405
 
 @app.route("/convert/<user>/name/<name>", methods=["GET"])
-def convert_text_to_anonimizedtext(user,name):
+def convert_text_to_anonimizedtext(user, name):
     if 'username' not in session:
         return render_template("dashboard.html", message="You must be signed in to upload files")
-    if (request.method == "GET"):
-            files_container = blob_service_client.get_container_client(user)
-            file_blob = files_container.get_blob_client(name)
-            if file_blob.exists():
-                print("File exists")
-                name,extension=os.path.splitext(name)
-                if extension == '.docx':
-                    txt= docx_to_string(file_blob)
-                elif extension == '.pdf':
-                    txt= pdf_to_string(file_blob)
-                documents = [txt]
-                output_file = "anonimazyed_" + name + extension
+    if request.method == "GET":
+        files_container = blob_service_client.get_container_client(user)
+        file_blob = files_container.get_blob_client(name)
+        if file_blob.exists():
+            print("File exists")
+            name, extension = os.path.splitext(name)
+            if extension == '.docx':
+                txt = docx_to_string(file_blob)
+            elif extension == '.pdf':
+                txt = pdf_to_string(file_blob)
+            documents = [txt]
+            output_file = "anonimized_" + name + extension
 
-                # Eseguire il riconoscimento PII e redigere il testo
-                language_country = client.detect_language(documents, country_hint="us")[0]
-                language=language_country.primary_language['iso6391_name']
-                print("LINGUA",language)
-                response = client.recognize_pii_entities(documents, language=language)
-                redacted_texts = []
-                for doc in response:
-                    if not doc.is_error:
-                        redacted_texts.append(doc.redacted_text)
-                    else:
-                        print("Error:", doc.error.message)
-
-                if redacted_texts:
-                    #print("Converting text",redacted_texts)
-                    if extension == ".pdf":
-                        output = BytesIO()
-                        c = canvas.Canvas(output, pagesize=letter)
-                        width, height = letter
-                        line_height = 14
-                        margin = 100
-                        y = height - margin
-                        for text in redacted_texts:
-                            lines = text.splitlines()
-                            for line in lines:
-                                if y < margin:
-                                    c.showPage()
-                                    y = height - margin
-                                c.drawString(margin, y, line)
-                                y -= line_height
-                        c.save()
-                        output.seek(0)
-                        output_blob = files_container.get_blob_client(output_file)
-                        output_blob.upload_blob(output.read(), overwrite=True)
-
-
-                    elif extension == ".docx":
-                        output = BytesIO()
-                        doc = Document()
-                        for text in redacted_texts:
-                            doc.add_paragraph(text)
-                        doc.save(output)
-                        output.seek(0)
-                        output_blob = files_container.get_blob_client(output_file)
-                        output_blob.upload_blob(output.read(), overwrite=True)
-                    
-                    print("Testo convertito salvato come", output_file)
+            # Eseguire il riconoscimento PII e redigere il testo
+            language_country = client.detect_language(documents, country_hint="us")[0]
+            language = language_country.primary_language['iso6391_name']
+            print("LINGUA", language)
+            response = client.recognize_pii_entities(documents, language=language)
+            
+            metadata = {}
+            for doc in response:
+                if not doc.is_error:
+                    for entity in doc.entities:
+                        metadata[entity.text] = entity.category
                 else:
-                    print("No PII detected")
-                files = [{"name": blob.name, "size": str(round(blob.size / 1024 / 1024)) + " mb"} for blob in files_container.list_blobs()]
-                space = sum([blob.size for blob in files_container.list_blobs()]) / 1024 / 1024
-                flash("Privacy Risk Level: No Risk")
-                return redirect(url_for('dashboard', username=user))
+                    print("Error:", doc.error.message)
+
+            if metadata:
+                if extension == ".pdf":
+                    redact_pdf(file_blob, output_file, metadata, files_container)
+                elif extension == ".docx":
+                    redact_docx(file_blob, output_file, metadata, files_container)
+
+                print("Testo convertito salvato come", output_file)
+            else:
+                print("No PII detected")
+            files = [{"name": blob.name, "size": str(round(blob.size / 1024 / 1024)) + " mb"} for blob in files_container.list_blobs()]
+            space = sum([blob.size for blob in files_container.list_blobs()]) / 1024 / 1024
+            flash("Privacy Risk Level: No Risk")
+            return redirect(url_for('dashboard', username=user))
     else:
-            return "Invalid request method", 405
+        return "Invalid request method", 405
+
+def redact_pdf(input_blob, output_file, metadata, container_client):
+    blob_data = input_blob.download_blob().readall()
+    
+    # Create a temporary file to process the PDF
+    with tempfile.NamedTemporaryFile(delete=False) as temp:
+        temp.write(blob_data)
+        temp_file_name = temp.name
+
+    # Open the original PDF with PyMuPDF
+    doc = fitz.open(temp_file_name)
+    
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        for word in metadata.keys():
+            text_instances = page.search_for(word)
+            
+            for inst in text_instances:
+                # Draw a white rectangle over the text to redact
+                rect = fitz.Rect(inst)
+                page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+                
+                # Ensure the text is completely redacted
+                page.add_redact_annot(rect, fill=(1, 1, 1))  # White fill
+                page.apply_redactions()
+
+    # Save the redacted PDF
+    redacted_output_path = f"{temp_file_name}_redacted.pdf"
+    doc.save(redacted_output_path, encryption=fitz.PDF_ENCRYPT_KEEP)
+    doc.close()
+    
+    # Upload the redacted PDF to the blob storage
+    output_blob = container_client.get_blob_client(output_file)
+    with open(redacted_output_path, "rb") as data:
+        output_blob.upload_blob(data, overwrite=True)
+
+    # Clean up temporary files
+    os.remove(temp_file_name)
+    os.remove(redacted_output_path)
+
+def redact_docx(input_blob, output_file, metadata, container_client):
+    blob_data = input_blob.download_blob().readall()
+    output = BytesIO()
+    doc = Document(io.BytesIO(blob_data))
+    for paragraph in doc.paragraphs:
+        redacted_paragraph = paragraph.text
+        for word in metadata.keys():
+            redacted_paragraph = redacted_paragraph.replace(word, '*' * len(word))
+        paragraph.text = redacted_paragraph
+    doc.save(output)
+    output.seek(0)
+    output_blob = container_client.get_blob_client(output_file)
+    output_blob.upload_blob(output.read(), overwrite=True)
 
 def docx_to_string(blob_client):
     blob_data = blob_client.download_blob().readall()
@@ -363,43 +449,46 @@ def pdf_to_string(blob_client):
     with pdfplumber.open(io.BytesIO(blob_data)) as pdf:
         text = ' '.join([page.extract_text() for page in pdf.pages])
     return text
+
 def pii_detection(documents, name, extension, file_blob, files_container):
     metadata_file = "metadata_" + name + ".json"
     response = client.recognize_pii_entities(documents, language="en")
     confidence_scores = []  # Aggiungi una lista per salvare i punteggi di confidenza
     metadata={}
     pii_found=False
+    categories_to_anonymize = ["Email", "PhoneNumber", "Address"]  # Aggiungi qui le categorie da anonimizzare
     for doc in response:
-            if not doc.is_error:
-                for entity in doc.entities:
+        if not doc.is_error:
+            for entity in doc.entities:
+                if entity.category in categories_to_anonymize:  # Controlla se la categoria dell'entità è da anonimizzare
                     confidence_score = entity.confidence_score
                     confidence_scores.append(confidence_score)  # Salva il punteggio di confidenza
                     metadata[entity.text] = entity.category
-            else:
-                print("Error:", doc.error.message)
+                    pii_found = True
+        else:
+            print("Error:", doc.error.message)
     if not pii_found:
         return {}, "No PII found"
-    print("Metadata:", metadata)
 
     # Calcola il punteggio di confidenza medio e lo mostra a schermo
     if confidence_scores:
-            # Estrai l'Average Confidence Score dai metadati, se esiste
-            average_confidence_score = sum(confidence_scores) / len(confidence_scores)
-            #Dice il livello di confidenza
-            if average_confidence_score==0:
-                text="No Risk"
-            if average_confidence_score < 0.25:
-                text="Very Low"
-                return metadata, text
-            elif average_confidence_score < 0.5:
-                text="Low"
-                return metadata, text
-            elif average_confidence_score < 0.75:
-                text="Medium"
-                return metadata, text
-            else:
-                text="High"
-                return metadata, text
+        # Estrai l'Average Confidence Score dai metadati, se esiste
+        average_confidence_score = sum(confidence_scores) / len(confidence_scores)
+        #Dice il livello di confidenza
+        if average_confidence_score==0:
+            text="No Risk"
+        if average_confidence_score < 0.25:
+            text="Very Low"
+            return metadata, text
+        elif average_confidence_score < 0.5:
+            text="Low"
+            return metadata, text
+        elif average_confidence_score < 0.75:
+            text="Medium"
+            return metadata, text
+        else:
+            text="High"
+            return metadata, text
 
 @app.route("/delete/<user>/<name>", methods=["GET"])
 def delete(user, name):
@@ -417,7 +506,7 @@ def delete(user, name):
                             try:
                                 conn = create_conn()
                                 cursor = conn.cursor()
-                                cursor.execute("DELETE FROM documents WHERE document_name = %s AND username = %s", (name, user))
+                                cursor.execute("DELETE FROM document WHERE document_name = %s AND username = %s", (name, user))
                                 conn.commit()
                                 cursor.close()
                                 conn.close()
@@ -469,7 +558,7 @@ def search(user):
             
             # Perform search on document name and metadata
             search_query = """
-                SELECT * FROM documents 
+                SELECT * FROM document 
                 WHERE username = %s AND 
                 (document_name LIKE %s OR JSON_EXTRACT(metadata, '$') LIKE %s)
             """
@@ -513,7 +602,7 @@ def view_file(user, name):
             
             if file_extension in ['.pdf', '.docx']:
                 encoded_blob_data = base64.b64encode(blob_data).decode('utf-8')
-                return render_template("view_file.html", username=user, file_data=encoded_blob_data, file_extension=file_extension)
+                return render_template("view_file.html", username=user, file_data=encoded_blob_data, file_extension=file_extension, file_name=name)
             else:
                 return "File type not supported for inline viewing", 400
         else:
