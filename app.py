@@ -58,7 +58,7 @@ language_key = "ef9d0971353548fbaa27880a6cfc1039"
 language_endpoint = "https://progettosistemi.cognitiveservices.azure.com/"
 user="azure_admin_pii"
 db_password="MjNORBNh$nbeKOyU"
-blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net')
+blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=profilipii;AccountKey=qjMlzWmsLsSjrBr297SlKRLZydzCe5IxiGN/KhDg16veFRR/PXkKlzhbJzU9m2vwmxB+FAiPPh63+ASt4ADgJg==;EndpointSuffix=core.windows.net')
 policy = PasswordPolicy.from_names(length
                                    =12,)
 
