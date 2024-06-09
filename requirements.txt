@@ -22,3 +22,4 @@ Flask-Dance
 requests
 requests-oauthlib
 pymupdf
+PyPDF2
