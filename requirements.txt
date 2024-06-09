@@ -20,3 +20,5 @@ reportlab
 Flask-Cors
 Flask-Dance
 requests
+requests-oauthlib
+pymupdf
