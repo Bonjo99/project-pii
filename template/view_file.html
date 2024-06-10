@@ -9,47 +9,129 @@
     <link rel="stylesheet" href="/static/css/viewfile.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
 </head>
+<style>
+    #page-controls {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background-color: transparent;
+    margin-top: 20px; /* Add a top margin */
+}
+
+
+    .button {
+        background-color: #f0f0f0; /* Grey background */
+        border: none; /* Remove border */
+        color: black; /* Black text */
+        padding: 10px 24px; /* Some padding */
+        text-align: center; /* Centered text */
+        text-decoration: none; /* Remove underline */
+        display: inline-block;
+        font-size: 16px; /* Change text size */
+        margin: 4px 2px; /* Some margin */
+        cursor: pointer; /* Mouse pointer on hover */
+        border-radius: 12px; /* Rounded corners */
+        transition-duration: 0.4s; /* Transition effect */
+    }
+    
+    .button:hover {
+        background-color: #e0e0e0; /* Darker grey background on hover */
+    }
+    </style>
 <body>
     <nav class="navbar navbar-dark bg-dark">
+        <a href="{{ url_for('dashboard', username=username) }}" class="navbar-brand">
+            <img src="https://img.icons8.com/ios-glyphs/30/ffffff/home.png"/>
+        </a>
         <span class="navbar-brand mb-0 h1">{{ file_name }}</span>
+        <div class="ml-auto">
+            <a href="{{ url_for('download', user=username, name=file_name) }}" class="btn btn-primary">
+                <img src="https://img.icons8.com/ios-glyphs/30/ffffff/download.png"/>
+            </a>
+        </div>
     </nav>
-    <div id="file-viewer" style="padding: 20px;"></div>
+    <div id="page-controls">
+        <button class="button" id="prev-page">Previous</button>
+        <input id="page-input" type="number" min="1" style="margin: 0 10px; width: 50px;">
+        <button class="button" id="next-page">Next</button>
+    </div>
+    <div id="file-viewer" style="padding: 20px; display: flex; flex-direction: column; align-items: center; overflow-y: auto;"></div>
     <script>
         const fileData = '{{ file_data }}';
         const fileExtension = '{{ file_extension }}';
-
+    
+        let currentPage = 1;
+    
         if (fileExtension === '.pdf') {
             const pdfData = atob(fileData);
             const loadingTask = pdfjsLib.getDocument({data: pdfData});
             loadingTask.promise.then(function(pdf) {
-                pdf.getPage(1).then(function(page) {
-                    const scale = 1.5;
-                    const viewport = page.getViewport({ scale: scale });
-
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-
-                    document.getElementById('file-viewer').appendChild(canvas);
-
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    page.render(renderContext);
+                const renderPage = function(num) {
+                    if (num < 1 || num > pdf.numPages) {
+                        return;
+                    }
+    
+                    pdf.getPage(num).then(function(page) {
+                        const scale = 1.5;
+                        const viewport = page.getViewport({ scale: scale });
+    
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+    
+                        document.getElementById('file-viewer').innerHTML = ''; // Clear the current page
+                        document.getElementById('file-viewer').appendChild(canvas);
+    
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+                        page.render(renderContext);
+    
+                        document.getElementById('page-input').value = num; // Update the page input field
+    
+                        // Update the visibility of the buttons
+                        document.getElementById('prev-page').style.display = num > 1 ? 'inline' : 'none';
+                        document.getElementById('next-page').style.display = num < pdf.numPages ? 'inline' : 'none';
+                    });
+                }
+    
+                document.getElementById('prev-page').addEventListener('click', function() {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderPage(currentPage);
+                    }
                 });
+    
+                document.getElementById('next-page').addEventListener('click', function() {
+                    if (currentPage < pdf.numPages) {
+                        currentPage++;
+                        renderPage(currentPage);
+                    }
+                });
+    
+                document.getElementById('page-input').addEventListener('change', function() {
+                    const pageNum = parseInt(this.value);
+                    if (pageNum >= 1 && pageNum <= pdf.numPages) {
+                        currentPage = pageNum;
+                        renderPage(currentPage);
+                    }
+                });
+    
+                renderPage(currentPage);
             });
         } else if (fileExtension === '.docx') {
             const arrayBuffer = Uint8Array.from(atob(fileData), c => c.charCodeAt(0)).buffer;
             mammoth.convertToHtml({arrayBuffer: arrayBuffer})
                 .then(displayResult)
                 .catch(handleError);
-
+    
             function displayResult(result) {
                 document.getElementById('file-viewer').innerHTML = result.value;
             }
-
+    
             function handleError(err) {
                 console.log(err);
             }

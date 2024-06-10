@@ -37,6 +37,8 @@ import base64
 from requests_oauthlib import OAuth2Session
 import json
 import fitz
+#aggiunte
+
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
@@ -53,12 +55,12 @@ google_bp = make_google_blueprint(
 app.register_blueprint(google_bp, url_prefix="/login")
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 bcrypt = Bcrypt(app)
-connection_string = "DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net"
+#connection_string = "DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net"
 language_key = "ef9d0971353548fbaa27880a6cfc1039"
 language_endpoint = "https://progettosistemi.cognitiveservices.azure.com/"
 user="azure_admin_pii"
 db_password="MjNORBNh$nbeKOyU"
-blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net')
+blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=profilipii;AccountKey=qjMlzWmsLsSjrBr297SlKRLZydzCe5IxiGN/KhDg16veFRR/PXkKlzhbJzU9m2vwmxB+FAiPPh63+ASt4ADgJg==;EndpointSuffix=core.windows.net')
 policy = PasswordPolicy.from_names(length
                                    =12,)
 
@@ -112,10 +114,6 @@ def dashboard():
     else:
         return redirect(url_for('sign_in'))
 
-
-def is_valid_username(username):
-    return all(c.islower() or c.isdigit() for c in username)
-
 # Rotta per l'accesso tramite Google
 @app.route("/google_login")
 def google_login():
@@ -165,6 +163,10 @@ def choose_username():
             if account:
                 # Username is taken, show an error message
                 flash("Username is already taken", "error")
+            if not is_valid_username(username):
+                print("Username must contain only lowercase letters and numbers")
+                flash("Username must contain only lowercase letters and numbers", "error")
+                return render_template("choose_username.html")
             else:
                 # Username is available, create a new user
                 password = bcrypt.generate_password_hash(os.urandom(24)).decode('utf-8')
@@ -178,21 +180,32 @@ def choose_username():
                 blob_service_client.create_container(username)
 
                 session['username'] = username
-                return redirect(url_for("dashboard"))
+                return redirect(url_for('dashboard', username=username))
 
         except Exception as e:
             return str(e)  # You should handle the error more gracefully in production
 
     return render_template("choose_username.html")
 
-
-#funzionante
 @app.route("/sign_up", methods=["GET","POST"])
 def sign_up():
+    form_data = session.get('form_data', {
+        "username": "",
+        "email": "",
+        "name": ""
+    })
     if request.method == 'POST':
         # Recupera i dati del modulo di registrazione
         password = request.form["password"]
         username = request.form["username"]
+        email = request.form["email"]
+        name = request.form["name"]
+        form_data = {
+            "username": username,
+            "email": email,
+            "name": name
+        }
+        session['form_data'] = form_data
         
         # Verifica se la password è stata utilizzata in precedenza in modo asincrono
         future = executor.submit(check_pwned_password, password)
@@ -200,17 +213,15 @@ def sign_up():
         # Verifica la lunghezza della password
         if policy.test(password):
             flash("Password must be at least 12 characters long", "error")
-        print("Checking if password is too weak")
         # Verifica la forza della password
         if zxcvbn(password)['score'] < 3:
             flash("Password is too weak", "error")
-        print("Checking if password has been pwned")
         # Verifica se la password è stata utilizzata in precedenza
         # Verifica se l'username è composto solo da lettere minuscole e numeri
         if not is_valid_username(username):
             print("Username must contain only lowercase letters and numbers")
             flash("Username must contain only lowercase letters and numbers", "error")
-            return render_template("signup.html", message="Username must contain only lowercase letters and numbers")
+            return render_template("signup.html", message="Username must contain only lowercase letters and numbers", form_data=form_data)
         
         # Recupera i dati del modulo di registrazione
         user_data = {
@@ -227,9 +238,9 @@ def sign_up():
                     cursor.execute("SELECT * FROM Users WHERE username = %s OR email = %s", (user_data["username"], user_data["email"]))
                     account = cursor.fetchone()
                     if (future.result()):                
-                        return render_template("signup.html", message="Password has been pwned")
+                        return render_template("signup.html", message="Password has been pwned", form_data=form_data)
                     if account:
-                        return render_template("signup.html", message="User or email already exists")
+                        return render_template("signup.html", message="User or email already exists", form_data=form_data)
                     else: 
                         query = "INSERT INTO Users (username, password, email, nome_utente) VALUES (%s, %s, %s, %s)"
                         print(f"Executing query: {query}")
@@ -237,17 +248,23 @@ def sign_up():
                         conn.commit()
         except Exception as e:
             print(f"Error checking if user or email exists: {e}")
+            return render_template("signup.html", message="An error occurred: " + str(e), form_data=form_data)
             
         # Crea un contenitore per l'utente
         try:
             blob_service_client.create_container(user_data["username"])
-            return render_template("dashboard.html", name=user_data["name"], files=[], password=user_data["password"], username=user_data["username"], space=0, nf=0)
-            #return redirect(url_for('user_page', username=user_data['username']))
+            session['username'] = user_data["username"]
+            session.pop('_flashes', None)
+            #return render_template("dashboard.html", files=[], password=user_data["password"], username=username, space=0, nf=0)
+            return redirect(url_for('dashboard', username=username))
         except Exception as e:
             print(f"Error creating container for user: {e}")
             return render_template("signup.html", message="An error occurred: " + str(e))
-    return render_template("signup.html", message="")
-    
+    return render_template("signup.html", message="", form_data=form_data)
+
+def is_valid_username(username):
+    return all(c.islower() or c.isdigit() for c in username)
+#LOGIN   
 @app.route("/sign_in", methods=["GET","POST"])
 def sign_in():
     if (request.method == "GET"):
@@ -274,7 +291,7 @@ def sign_in():
             print(f"Error checking if user exists: {e}")
             return render_template("signin.html", message="An error occurred")
         
-
+#UPLOAD FILE
 @app.route("/upload/<user>/file", methods=["POST"])
 def upload(user):
     if 'username' not in session:
@@ -338,6 +355,7 @@ def upload(user):
     else:
         return "Invalid request method", 405
 
+#CONVERT FILE TO ANONIMIZED FILE
 @app.route("/convert/<user>/name/<name>", methods=["GET"])
 def convert_text_to_anonimizedtext(user, name):
     if 'username' not in session:
@@ -385,6 +403,7 @@ def convert_text_to_anonimizedtext(user, name):
     else:
         return "Invalid request method", 405
 
+#FUNCTIONS FOR REDACTING PDF AND DOCX FILES
 def redact_pdf(input_blob, output_file, metadata, container_client):
     blob_data = input_blob.download_blob().readall()
     
@@ -490,6 +509,7 @@ def pii_detection(documents, name, extension, file_blob, files_container):
             text="High"
             return metadata, text
 
+#DELETE FILE ON BLOB STORAGE AND DATABASE
 @app.route("/delete/<user>/<name>", methods=["GET"])
 def delete(user, name):
     if 'username' not in session:
@@ -524,7 +544,7 @@ def delete(user, name):
     return "Invalid request method", 405
 
 
-
+#DOWNLOAD FILE
 @app.route("/download/<user>/name/<name>", methods=["GET"])
 def download(user, name):
     if 'username' not in session:
@@ -545,6 +565,7 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+#SEARCH FILE ON BLOB STORAGE AND DATABASE(SEARCH BY NAME AND METADATA)
 @app.route('/search/<user>', methods=['POST','GET'])
 def search(user):
     if 'username' not in session:
@@ -585,9 +606,10 @@ def search(user):
             return render_template("dashboard.html", username=user, space=round(space), nf=len(files), files=files)
         else:
             return redirect(url_for('dashboard', username=user))
-    else:  # GET request
+    else: 
         return render_template("dashboard.html", username=user, space=round(space), nf=len(files), files=files)
 
+#VIEW FILE DIRECTLY ON BROWSER
 @app.route("/view/<user>/name/<name>", methods=["GET"])
 def view_file(user, name):
     print("View file")

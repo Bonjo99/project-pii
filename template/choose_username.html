@@ -5,23 +5,145 @@
     <link rel="shortcut icon" href="/static/images/ic.png">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <link rel="stylesheet" type="text/css" href="/static/css/signin.css">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Choose Username</title>
+    <style>
+         body {
+            background-color: #333; /* Imposta lo sfondo scuro */
+            color: #fff; /* Imposta il colore del testo a bianco */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 2em;
+            background-color: #171717;
+            border-radius: 25px;
+            transition: 0.4s ease-in-out;
+            width: 100%;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .card {
+            background-image: linear-gradient(163deg, #003f5b 0%, #00ff6a80 100%);
+            border-radius: 22px;
+            transition: all 0.3s;
+            padding: 0.02em;
+        }
+
+        .card2 {
+            border-radius: 0;
+            transition: all 0.2s;
+        }
+
+        .card2:hover {
+            transform: scale(0.98);
+            border-radius: 20px;
+        }
+
+        .card:hover {
+            box-shadow: 0px 0px 30px 1px rgba(0, 255, 117, 0.3);
+        }
+
+        .head {
+            text-align: center;
+            margin-bottom: 2em;
+            color: rgb(255, 255, 255);
+            font-size: 1.2em;
+        }
+
+        .inputs .form-control {
+            margin-bottom: 10px;
+            background-color: #171717;
+            border: none;
+            border-radius: 25px;
+            color: #d3d3d3;
+            padding: 0.75em 1em;
+            box-shadow: inset 2px 5px 10px rgb(5, 5, 5);
+        }
+
+        .form .btn {
+            display: flex;
+            justify-content: center;
+            flex-direction: row;
+            margin-top: 2.5em;
+        }
+
+        .btn {
+            padding: 0.5em;
+            border-radius: 5px;
+            border: none;
+            outline: none;
+            transition: 0.4s ease-in-out;
+            background-color: #252525;
+            color: white;
+        }
+
+        .btn:hover {
+            background-color: black;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: red;
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 1em;
+        }
+
+        .form-footer a {
+            color: rgba(0, 255, 117, 0.3);
+            text-decoration: none;
+        }
+
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body class="text-center">
 
-    <div class="container">
-        <form class="form-signin" method="POST" action="/choose_username">
-            <div class="head">
-                <span>Please choose a username</span>
-                <p>Enter your desired username.</p>
-            </div>
-            <div class="inputs">
-                <input type="text" id="inputUsername" class="form-control" placeholder="Username" required autofocus name="username">
-            </div>
-            <button class="btn btn-lg btn-primary btn-block" type="submit">Choose Username</button>
-        </form>
+    <div class="container card">
+        <div class="card2">
+            <form class="form-signin form" method="POST" action="/choose_username">
+                <div class="head">
+                    <span>Please choose a username</span>
+                </div>
+                <div class="inputs">
+                    <input type="text" id="inputUsername" class="form-control" placeholder="Username" required autofocus name="username">
+                </div>
+                <button class="btn btn-lg btn-primary btn-block" type="submit">Choose Username</button>
+            </form>
+        </div>
     </div>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <script>
+                swal({
+                    title: "Error!",
+                    text: "{{ message }}",
+                    icon: "error",
+                    button: "OK",
+                });
+            </script>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.bundle.min.js"></script>

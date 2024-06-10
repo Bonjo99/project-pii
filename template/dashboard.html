@@ -14,10 +14,64 @@
     <!-- Mammoth.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
 </head>
+<style>
+    .card {
+        position: relative;
+        margin-top: 20px;
+    }
+    .toolbar {
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        background-color: #e0e0e0;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        z-index: 1;
+    }
+
+    .card:hover + .toolbar {
+        display: flex;
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    }
+    .toolbar.active {
+        display: flex;
+    }
+
+    .toolbar .btn {
+        margin: 0 5px;
+    }
+
+    .file-preview {
+        width: 100%;
+        height: 200px;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+    .close-button {
+        color: white;
+        background-color: red;
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 5px;
+        position: absolute; /* posizionamento assoluto */
+        top: 10px; /* posizionato a 10px dal bordo superiore */
+        right: 10px; /* posizionato a 10px dal bordo destro */
+    }
+    .row {
+        margin-top: 10px;
+    }
+</style>
 <body>
     <div class="container">
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-12">
                 {% with messages = get_flashed_messages() %}
                     {% if messages %}
                         <div class="alert alert-warning">
@@ -30,7 +84,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-3">
+            <div class="col-md-3 col-sm-12">
                 <div class="card">
                     <img src="/static/avatars/blank.png" class="card-img-top" alt="Profile Picture">
                     <div class="card-body">
@@ -43,7 +97,7 @@
                         </h5>
                         <p class="card-text">Number of files: {{nf}}</p>
                         <p class="card-text">Total space used: {{space}} mb</p>
-                        <p class="card-text">Space available: <span id="space-available"></span> gb</p>
+                        <p class="card-text">Space available: <span id="space-available"></span> gb</p>                        
                         <form method="POST" action="/upload/{{ username }}/file" enctype="multipart/form-data">
                             <div class="form-group">
                                 <label for="file-upload" class="btn btn-primary">Select files</label>
@@ -54,31 +108,44 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-9">
-                <form method="POST" action="/search/{{username}}" class="search-form">
-                    <input class="search-input" type="text" name="search" placeholder="Search">
-                    <button class="search-button" type="submit">Search</button>
+            <div class="col-12 col-md-9 mb-4">
+                <form method="POST" action="/search/{{username}}" class="search-form mb-4">
+                    <input class="search-input form-control" type="text" name="search" placeholder="Search">
+                    <button class="search-button btn btn-primary mt-2" type="submit">Search</button>
                 </form>
+                {% for i in files %}
+                <div class="toolbar" id="toolbar-{{i.name}}">
+                    <button onclick="location.href='/delete/{{username}}/{{i.name}}'" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash-alt"></i> <!-- Icona di eliminazione -->
+                    </button>
+                    <button onclick="location.href='/download/{{username}}/name/{{i.name}}'" class="btn btn-primary btn-sm">
+                        <i class="fas fa-download"></i> <!-- Icona di download -->
+                    </button>
+                    <button onclick="location.href='/view/{{username}}/name/{{i.name}}'" class="btn btn-info btn-sm">
+                        <i class="fas fa-eye"></i> <!-- Icona di visualizzazione -->
+                    </button>
+                    <form method="GET" action="/convert/{{username}}/name/{{i.name}}" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary btn-sm">Convert</button>
+                    </form>
+                    <button class="btn btn-sm close-button" onclick="hideToolbar('{{i.name}}'); event.stopPropagation();">
+                        <i class="fas fa-times"></i> <!-- Icona di chiusura -->
+                    </button>
+                </div>
+                {% endfor %}
                 <div class="row">
                     {% for i in files %}
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h5 class="card-title">
-                                        {{i.name[0:10]}}{% if i.name|length > 10 %}...{% endif %}
-                                        <button class="btn btn-info btn-sm rounded-circle" style="background-color: gray;" onclick="showInfo('{{i.name}}', '{{i.size}}')">
-                                            <i class="fas fa-info-circle"></i>
-                                        </button>
-                                    </h5>
-                                    <a href="/delete/{{username}}/{{i.name}}" class="btn btn-danger btn-sm">Delete</a>
-                                    <a href="/download/{{username}}/name/{{i.name}}" class="btn btn-primary btn-sm">Download</a>
-                                    <a href="/view/{{username}}/name/{{i.name}}" class="btn btn-info btn-sm">View</a>
-                                    <form method="GET" action="/convert/{{username}}/name/{{i.name}}">
-                                        <button type="submit" class="btn btn-secondary btn-sm">Convert</button>
-                                    </form>
-                                </div>
+                    <div class="col-md-4 col-sm-6 col-12">
+                        <div class="card" onclick="showToolbar('{{i.name}}')">
+                            <div class="card-body d-flex align-items-center"> <!-- Aggiungi le classi d-flex e align-items-center -->
+                                <h5 class="card-title m-0 flex-grow-1">
+                                    {{i.name[0:15]}}{% if i.name|length > 10 %}...{% endif %}
+                                </h5>
+                                <button class="btn btn-info btn-sm rounded-circle" style="background-color: gray;" onclick="event.stopPropagation(); showInfo('{{i.name}}', '{{i.size}}')">
+                                    <i class="fas fa-info-circle"></i>
+                                </button>
                             </div>
                         </div>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
@@ -104,8 +171,21 @@
     </div>
 
     <script>
-        function showInfo(name, size) {
-            alert("Name: " + name + "\nSize: " + size );
+        var selectedCard = null;
+
+        function showToolbar(name) {
+            if (selectedCard) {
+                hideToolbar(selectedCard);
+            }
+            document.getElementById('toolbar-' + name).style.display = 'block';
+            selectedCard = name;
+        }
+
+        function hideToolbar(name) {
+            document.getElementById('toolbar-' + name).style.display = 'none';
+            if (selectedCard === name) {
+                selectedCard = null;
+            }
         }
 
         function viewFile(fileName, fileExtension) {
@@ -118,6 +198,9 @@
                         showDocx(data);
                     }
                 });
+        }
+        function showInfo(name, size) {
+            alert("Name: " + name + "\nSize: " + size );
         }
 
         function showPDF(data) {
