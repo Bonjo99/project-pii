@@ -372,12 +372,12 @@ def convert_text_to_anonimizedtext(user, name):
     if request.method == "GET":
         files_container = blob_service_client.get_container_client(user)
         file_blob = files_container.get_blob_client(name)
-        
+        files = [{"name": blob.name, "size": str(round(blob.size / 1024 / 1024)) + " mb"} for blob in files_container.list_blobs()]
          # Calculate the total size of the files to be uploaded
-        total_size = sum(f.content_length for f in files)
+        total_size = sum(float(f['size'].split()[0]) for f in files)
 
         # Check if the user has enough space
-        space_used = sum([blob.size for blob in container_client.list_blobs()]) / 1024 / 1024
+        space_used = sum([blob.size for blob in files_container.list_blobs()]) / 1024 / 1024
         space_left = 1024 - space_used  # 1GB - space used
         if total_size > space_left:
             flash("Not enough space. Please delete some files or upgrade your storage.")
