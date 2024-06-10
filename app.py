@@ -300,6 +300,15 @@ def upload(user):
         container_client = blob_service_client.get_container_client(user)
         files = request.files.getlist("files[]")
         valid_files = []
+         # Calculate the total size of the files to be uploaded
+        total_size = sum(f.content_length for f in files)
+
+        # Check if the user has enough space
+        space_used = sum([blob.size for blob in container_client.list_blobs()]) / 1024 / 1024
+        space_left = 1024 - space_used  # 1GB - space used
+        if total_size > space_left:
+            flash("Not enough space. Please delete some files or upgrade your storage.")
+            return redirect(url_for('dashboard', username=user))
 
         # Validate files first
         for f in files:
@@ -363,19 +372,35 @@ def convert_text_to_anonimizedtext(user, name):
     if request.method == "GET":
         files_container = blob_service_client.get_container_client(user)
         file_blob = files_container.get_blob_client(name)
+        
+         # Calculate the total size of the files to be uploaded
+        total_size = sum(f.content_length for f in files)
+
+        # Check if the user has enough space
+        space_used = sum([blob.size for blob in container_client.list_blobs()]) / 1024 / 1024
+        space_left = 1024 - space_used  # 1GB - space used
+        if total_size > space_left:
+            flash("Not enough space. Please delete some files or upgrade your storage.")
+            return redirect(url_for('dashboard', username=user))
         if file_blob.exists():
-            print("File exists")
             name, extension = os.path.splitext(name)
             if extension == '.docx':
                 txt = docx_to_string(file_blob)
             elif extension == '.pdf':
                 txt = pdf_to_string(file_blob)
+            if len(txt.split()) > 5120:
+                flash("Error: Document size exceeds the limit of 5120 words")
+                return redirect(url_for('dashboard', username=user))
             documents = [txt]
             output_file = "anonimized_" + name + extension
 
             # Eseguire il riconoscimento PII e redigere il testo
-            language_country = client.detect_language(documents, country_hint="us")[0]
-            language = language_country.primary_language['iso6391_name']
+            try:
+                language_country = client.detect_language(documents, country_hint="us")[0]
+                language = language_country.primary_language['iso6391_name']
+            except Exception as e:
+                    flash("Error: Document size exceeds the limit of 5120 words")
+                    return redirect(url_for('dashboard', username=user))
             print("LINGUA", language)
             response = client.recognize_pii_entities(documents, language=language)
             

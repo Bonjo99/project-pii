@@ -9,65 +9,7 @@
     <script type="text/javascript" src="/static/script/profile.js"></script>
     <link rel="stylesheet" href="/static/css/dashboard.css">
     <title>Dashboard</title>
-    <!-- PDF.js library -->
-    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
-    <!-- Mammoth.js library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
 </head>
-<style>
-    .card {
-        position: relative;
-        margin-top: 20px;
-    }
-    .toolbar {
-        display: none;
-        justify-content: space-between;
-        align-items: center;
-        position: relative;
-        background-color: #e0e0e0;
-        padding: 10px;
-        margin-top: 10px;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        z-index: 1;
-    }
-
-    .card:hover + .toolbar {
-        display: flex;
-        transform: scale(1.02);
-        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
-    }
-    .toolbar.active {
-        display: flex;
-    }
-
-    .toolbar .btn {
-        margin: 0 5px;
-    }
-
-    .file-preview {
-        width: 100%;
-        height: 200px;
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-    .close-button {
-        color: white;
-        background-color: red;
-        border: none;
-        font-size: 1rem;
-        cursor: pointer;
-        padding: 5px 10px;
-        border-radius: 5px;
-        position: absolute; /* posizionamento assoluto */
-        top: 10px; /* posizionato a 10px dal bordo superiore */
-        right: 10px; /* posizionato a 10px dal bordo destro */
-    }
-    .row {
-        margin-top: 10px;
-    }
-</style>
 <body>
     <div class="container">
         <div class="row">
@@ -85,7 +27,7 @@
         </div>
         <div class="row">
             <div class="col-md-3 col-sm-12">
-                <div class="card">
+                <div class="card sticky">
                     <img src="/static/avatars/blank.png" class="card-img-top" alt="Profile Picture">
                     <div class="card-body">
                         <h5 class="card-title">{{name}}
@@ -109,7 +51,7 @@
                 </div>
             </div>
             <div class="col-12 col-md-9 mb-4">
-                <form method="POST" action="/search/{{username}}" class="search-form mb-4">
+                <form method="POST" action="/search/{{username}}" class="search-form mb-4 sticky">
                     <input class="search-input form-control" type="text" name="search" placeholder="Search">
                     <button class="search-button btn btn-primary mt-2" type="submit">Search</button>
                 </form>
@@ -152,24 +94,7 @@
         </div>
     </div>
 
-    <!-- Modal for viewing files -->
-    <div class="modal fade" id="fileModal" tabindex="-1" role="dialog" aria-labelledby="fileModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="fileModalLabel">View File</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <iframe id="fileViewer" width="100%" height="600px"></iframe>
-                    <canvas id="pdfViewer" style="width: 100%; height: 600px;"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script>
         var selectedCard = null;
 
@@ -201,52 +126,7 @@
         }
         function showInfo(name, size) {
             alert("Name: " + name + "\nSize: " + size );
-        }
-
-        function showPDF(data) {
-            var pdfData = atob(data);
-            var loadingTask = pdfjsLib.getDocument({data: pdfData});
-            loadingTask.promise.then(function(pdf) {
-                pdf.getPage(1).then(function(page) {
-                    var scale = 1.5;
-                    var viewport = page.getViewport({scale: scale});
-                    var canvas = document.getElementById('pdfViewer');
-                    var context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    var renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    page.render(renderContext);
-                });
-            });
-            $('#fileModal').modal('show');
-            document.getElementById('pdfViewer').style.display = 'block';
-            document.getElementById('fileViewer').style.display = 'none';
-        }
-
-        function showDocx(data) {
-            var arrayBuffer = base64ToArrayBuffer(data);
-            mammoth.convertToHtml({arrayBuffer: arrayBuffer})
-                .then(function(result) {
-                    var html = result.value;
-                    document.getElementById('fileViewer').srcdoc = html;
-                });
-            $('#fileModal').modal('show');
-            document.getElementById('pdfViewer').style.display = 'none';
-            document.getElementById('fileViewer').style.display = 'block';
-        }
-
-        function base64ToArrayBuffer(base64) {
-            var binary_string = atob(base64);
-            var len = binary_string.length;
-            var bytes = new Uint8Array(len);
-            for (var i = 0; i < len; i++) {
-                bytes[i] = binary_string.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
+        }        
 
         document.getElementById('space-available').innerText = Math.floor((1 - ({{space}})/1024)*1000)/1000;
 
@@ -277,5 +157,3 @@
             }
         }
     </script>
-
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
