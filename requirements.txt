@@ -23,3 +23,4 @@ requests
 requests-oauthlib
 pymupdf
 PyPDF2
+Flask-Mail
