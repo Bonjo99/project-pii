@@ -40,9 +40,18 @@ import fitz
 #aggiunte
 from flask_mail import Mail, Message
 import string
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
+
+# Configura Limiter per Throttling
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["20 per day", "5 per hour"]
+)
 #config google
 app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Replace with your Google Client ID
 app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  # Replace with your Google Client Secret
@@ -196,6 +205,7 @@ app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
 mail = Mail(app)
 
 @app.route("/reset_password", methods=["GET", "POST"])
+@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of password reset attempts. Please try again later.")
 def reset_password():
     if request.method == "POST":
         email = request.form["email"]
@@ -222,6 +232,7 @@ def reset_password():
     return render_template("reset_password.html", message="")
 
 @app.route("/sign_up", methods=["GET","POST"])
+@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of registration. Please try again later.")
 def sign_up():
     form_data = session.get('form_data', {
         "username": "",
@@ -300,6 +311,7 @@ def is_valid_username(username):
     return all(c.islower() or c.isdigit() for c in username)
 #LOGIN   
 @app.route("/sign_in", methods=["GET","POST"])
+@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of login attempts. Please try again later or reset your password.")
 def sign_in():
     if (request.method == "GET"):
         return render_template("signin.html", message="")
