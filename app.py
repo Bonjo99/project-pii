@@ -40,18 +40,17 @@ import fitz
 #aggiunte
 from flask_mail import Mail, Message
 import string
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+#aggiunte pip install flask-wtf flask-session
+from markupsafe import escape
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
 
-# Configura Limiter per Throttling
-limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["20 per day", "5 per hour"]
-)
+
+# Configura la sessione per utilizzare il filesystem (puoi anche configurarlo per utilizzare database o redis)
+app.config['SESSION_TYPE'] = 'filesystem'
+
+
 #config google
 app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Replace with your Google Client ID
 app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  # Replace with your Google Client Secret
@@ -162,7 +161,7 @@ def google_login():
 @app.route("/choose_username", methods=["GET", "POST"])
 def choose_username():
     if request.method == 'POST':
-        username = request.form["username"]
+        username = escape(request.form["username"])
         # Check if the username is taken
         try:
             conn = create_conn()
@@ -205,10 +204,9 @@ app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
 mail = Mail(app)
 
 @app.route("/reset_password", methods=["GET", "POST"])
-@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of password reset attempts. Please try again later.")
 def reset_password():
     if request.method == "POST":
-        email = request.form["email"]
+        email = str(escape(request.form["email"]))
         with create_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT * FROM Users WHERE email = %s", (email,))
@@ -232,7 +230,6 @@ def reset_password():
     return render_template("reset_password.html", message="")
 
 @app.route("/sign_up", methods=["GET","POST"])
-@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of registration. Please try again later.")
 def sign_up():
     form_data = session.get('form_data', {
         "username": "",
@@ -241,10 +238,10 @@ def sign_up():
     })
     if request.method == 'POST':
         # Recupera i dati del modulo di registrazione
-        password = request.form["password"]
-        username = request.form["username"]
-        email = request.form["email"]
-        name = request.form["name"]
+        password = escape(request.form["password"])
+        username = escape(request.form["username"])
+        email = escape(request.form["email"])
+        name = escape(request.form["name"])
         form_data = {
             "username": username,
             "email": email,
@@ -311,13 +308,12 @@ def is_valid_username(username):
     return all(c.islower() or c.isdigit() for c in username)
 #LOGIN   
 @app.route("/sign_in", methods=["GET","POST"])
-@limiter.limit("5 per minute", error_message="You have exceeded the maximum number of login attempts. Please try again later or reset your password.")
 def sign_in():
     if (request.method == "GET"):
         return render_template("signin.html", message="")
     else:
-        username = request.form["username"]
-        password = request.form["password"]
+        username = str(escape(request.form["username"]))
+        password = escape(request.form["password"])
         try:
             conn = create_conn()
             cursor = conn.cursor()
@@ -643,7 +639,7 @@ def search(user):
         return render_template("dashboard.html", message="You must be signed in to upload files")
     
     if request.method == 'POST':
-        query = request.form['search']
+        query = escape(request.form['search'])
         if query:
             conn = create_conn()
             cursor = conn.cursor(dictionary=True)
