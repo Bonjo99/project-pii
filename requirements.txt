@@ -24,3 +24,5 @@ requests-oauthlib
 pymupdf
 PyPDF2
 Flask-Mail
+flask-wtf
+flask-session
