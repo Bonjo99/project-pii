@@ -135,3 +135,16 @@ body {
     top: 0;
     z-index: 1000;
 }
+@media (max-width: 767px) {
+    #profile-card img {
+      display: none;
+    }
+    #profile-card .card-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .responsive-hide {
+        display: none;
+    }
+  }

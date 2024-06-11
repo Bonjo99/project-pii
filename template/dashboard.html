@@ -39,13 +39,13 @@
                         </h5>
                         <p class="card-text">Number of files: {{nf}}</p>
                         <p class="card-text">Total space used: {{space}} mb</p>
-                        <p class="card-text">Space available: <span id="space-available"></span> gb</p>                        
+                        <p class="card-text">Space available: <span id="space-available"></span> gb</p>       
                         <form method="POST" action="/upload/{{ username }}/file" enctype="multipart/form-data">
                             <div class="form-group">
-                                <label for="file-upload" class="btn btn-primary">Select files</label>
+                                <label for="file-upload" class="btn btn-info responsive-hide">Select files</label>
                                 <input type="file" id="file-upload" name="files[]" multiple style="display:none;">
                             </div>
-                            <button type="submit" class="btn btn-success">Upload</button>
+                            <button type="submit" class="btn btn-warning responsive-hide">Upload</button>
                         </form>
                     </div>
                 </div>
@@ -93,8 +93,13 @@
                 </div>
             </div>
         </div>
+        <div id="upload-button-container" class="fixed-bottom mb-3 mr-3 d-sm-none d-block">
+            <input type="file" id="file-input" style="display: none;">
+            <button id="upload-button" class="btn btn-primary btn-lg"><i class="fas fa-cloud-upload-alt"></i></button>
+        </div>
     </div>
 
+   
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script>
         var selectedCard = null;
@@ -157,4 +162,45 @@
                 }
             }
         }
+        document.addEventListener("DOMContentLoaded", function() {
+    // Seleziona il bottone di caricamento del file
+    var uploadButton = document.getElementById('upload-button');
+
+    // Aggiungi un listener per il click sul bottone di caricamento del file
+    uploadButton.addEventListener('click', function() {
+        // Quando il bottone viene cliccato, simula il click sull'input file
+        document.getElementById('file-input').click();
+    });
+
+    // Aggiungi un listener per il cambiamento del file selezionato
+    document.getElementById('file-input').addEventListener('change', function(event) {
+        var files = event.target.files;
+        if (files.length > 0) {
+            var formData = new FormData();
+            // Aggiungi i file selezionati al FormData
+            for (var i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i]);
+            }
+            // Esegui la richiesta POST per caricare i file
+            fetch('/upload/{{ username }}/file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Se il caricamento ha successo, ricarica la pagina
+                    window.location.reload();
+                } else {
+                    // Se il caricamento fallisce, mostra un messaggio di errore
+                    alert('Errore durante il caricamento del file.');
+                }
+            })
+            .catch(error => {
+                console.error('Si è verificato un errore:', error);
+                alert('Si è verificato un errore durante il caricamento del file.');
+            });
+        }
+    });
+});
+
     </script>
