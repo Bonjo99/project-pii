@@ -38,7 +38,8 @@ from requests_oauthlib import OAuth2Session
 import json
 import fitz
 #aggiunte
-
+from flask_mail import Mail, Message
+import string
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
@@ -186,6 +187,39 @@ def choose_username():
             return str(e)  # You should handle the error more gracefully in production
 
     return render_template("choose_username.html")
+# Configura Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'francesco.bongiovanni99@gmail.com'
+app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
+mail = Mail(app)
+
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_password():
+    if request.method == "POST":
+        email = request.form["email"]
+        with create_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM Users WHERE email = %s", (email,))
+                account = cursor.fetchone()
+                if account:
+                    # Genera una nuova password casuale
+                    new_password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+                    hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+                    # Aggiorna la password dell'utente nel database
+                    cursor.execute("UPDATE Users SET password = %s WHERE email = %s", (hashed_password, email))
+                    conn.commit()
+                    # Invia la nuova password all'utente via email
+                    msg = Message('Your password has been reset',
+                                  sender='noreply@demo.com',
+                                  recipients=[email])
+                    msg.body = f'Your new password is: {new_password}'
+                    mail.send(msg)
+                    return render_template("signin.html", message="Your password has been reset. Please check your email.")
+                else:
+                    return render_template("reset_password.html", message="No account with that email address exists.")
+    return render_template("reset_password.html", message="")
 
 @app.route("/sign_up", methods=["GET","POST"])
 def sign_up():
