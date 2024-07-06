@@ -65,11 +65,11 @@ app.register_blueprint(google_bp, url_prefix="/login")
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 bcrypt = Bcrypt(app)
 #connection_string = "DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net"
-language_key = "ef9d0971353548fbaa27880a6cfc1039"
-language_endpoint = "https://progettosistemi.cognitiveservices.azure.com/"
-user="azure_admin_pii"
-db_password="MjNORBNh$nbeKOyU"
-blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=profilipii;AccountKey=qjMlzWmsLsSjrBr297SlKRLZydzCe5IxiGN/KhDg16veFRR/PXkKlzhbJzU9m2vwmxB+FAiPPh63+ASt4ADgJg==;EndpointSuffix=core.windows.net')
+language_key = "523f45988b474bba8e9f474b8e97c4b0"
+language_endpoint = "https://piilanguagesistemi.cognitiveservices.azure.com/"
+user="piiadmin2024"
+db_password="ProgettoSistemi2024"
+blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=piiprofilearchive;AccountKey=hsZDEcnQwHUAbqjD6moAbSmb0XeC6LXfuanPq9LT+ZFf/csxE/NdyQxKXSUNhKkWVytmQKAt142v+AStDJLWBw==;EndpointSuffix=core.windows.net')
 policy = PasswordPolicy.from_names(length
                                    =12,)
 
@@ -98,8 +98,8 @@ def no_cache(response):
     return response
 # Connessione al database
 def create_conn():
-    conn = mysql.connector.connect(host='piiserver.mysql.database.azure.com',
-                                   database='login_database',
+    conn = mysql.connector.connect(host='piidatabaseserver.mysql.database.azure.com',
+                                   database='pii',
                                    user=user,
                                    password=db_password)
     return conn
@@ -161,7 +161,7 @@ def google_login():
 @app.route("/choose_username", methods=["GET", "POST"])
 def choose_username():
     if request.method == 'POST':
-        username = escape(request.form["username"])
+        username = request.form["username"].strip()
         # Check if the username is taken
         try:
             conn = create_conn()
