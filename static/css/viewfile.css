@@ -9,3 +9,31 @@
 #file-viewer p {
     margin-bottom: 1em;
 }
+#page-controls {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background-color: transparent;
+    margin-top: 20px; 
+}
+
+
+    .button {
+        background-color: #f0f0f0; 
+        border: none; 
+        color: black; 
+        padding: 10px 24px;
+        text-align: center; 
+        text-decoration: none; 
+        display: inline-block;
+        font-size: 16px; 
+        margin: 4px 2px; 
+        cursor: pointer; /* Mouse pointer on hover */
+        border-radius: 12px; /* Rounded corners */
+        transition-duration: 0.4s; /* Transition effect */
+    }
+    
+    .button:hover {
+        background-color: #e0e0e0; 
+    }

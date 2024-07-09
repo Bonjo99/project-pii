@@ -166,13 +166,13 @@
     // Seleziona il bottone di caricamento del file
     var uploadButton = document.getElementById('upload-button');
 
-    // Aggiungi un listener per il click sul bottone di caricamento del file
+    // Listener per il click sul bottone di caricamento del file
     uploadButton.addEventListener('click', function() {
         // Quando il bottone viene cliccato, simula il click sull'input file
         document.getElementById('file-input').click();
     });
 
-    // Aggiungi un listener per il cambiamento del file selezionato
+    // Listener per il cambiamento del file selezionato
     document.getElementById('file-input').addEventListener('change', function(event) {
         var files = event.target.files;
         if (files.length > 0) {

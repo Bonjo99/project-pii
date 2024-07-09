@@ -31,8 +31,8 @@ body {
     }
     }
     .loader {
-        border: 8px solid #f3f3f3; /* Light grey */
-        border-top: 8px solid #3498db; /* Blue */
+        border: 8px solid #f3f3f3; 
+        border-top: 8px solid #3498db;
         border-radius: 50%;
         width: 60px;
         height: 60px;
@@ -229,12 +229,12 @@ body {
     .form-footer a:hover {
         text-decoration: underline;
     }
-/* Seleziona l'elemento password */
+/* Select password element */
 #password {
-margin-bottom: 0 !important; /* Riduci il margine inferiore */
+margin-bottom: 0 !important; /* Reduce the bottom margin */
 }
 
-/* Seleziona il bottone di signup */
+/* Select the signup button */
 #signup-button {
-margin-top: 0 !important; /* Riduci il margine superiore */
+margin-top: 0 !important; /* Reduce the top margin*/
 }

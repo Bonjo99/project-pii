@@ -37,23 +37,17 @@ import base64
 from requests_oauthlib import OAuth2Session
 import json
 import fitz
-#aggiunte
 from flask_mail import Mail, Message
 import string
-#aggiunte pip install flask-wtf flask-session
 from markupsafe import escape
 
 app = Flask(__name__, static_folder="static", template_folder="template")
 app.secret_key = os.urandom(24)
 
 
-# Configura la sessione per utilizzare il filesystem (puoi anche configurarlo per utilizzare database o redis)
-app.config['SESSION_TYPE'] = 'filesystem'
-
-
 #config google
-app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Replace with your Google Client ID
-app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  # Replace with your Google Client Secret
+app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Google Client ID
+app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  #Google Client Secret
 google_bp = make_google_blueprint(
     client_id=app.config["GOOGLE_OAUTH_CLIENT_ID"],
     client_secret=app.config["GOOGLE_OAUTH_CLIENT_SECRET"],
@@ -64,7 +58,6 @@ google_bp = make_google_blueprint(
 app.register_blueprint(google_bp, url_prefix="/login")
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 bcrypt = Bcrypt(app)
-#connection_string = "DefaultEndpointsProtocol=https;AccountName=archiviocartelle;AccountKey=RSR+7NZLPvX8JCl2T/7zB29JcyC9lLe+BqRlFd63PeYP8urWUACSo1yrM2GiXibXi1QSyEReRo4m+AStJj6+ow==;EndpointSuffix=core.windows.net"
 language_key = "523f45988b474bba8e9f474b8e97c4b0"
 language_endpoint = "https://piilanguagesistemi.cognitiveservices.azure.com/"
 user="piiadmin2024"
@@ -73,7 +66,6 @@ blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpoints
 policy = PasswordPolicy.from_names(length
                                    =12,)
 
-#logging.basicConfig(level=logging.DEBUG)
 def rf(a):
 	return open(a,"r").read()
 
@@ -86,6 +78,19 @@ def authenticate_client():
     return text_analytics_client
 
 client = authenticate_client()
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'francesco.bongiovanni99@gmail.com'
+app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
+mail = Mail(app)
+
+
+# Configure the session to use the filesystem (you can also configure it to use databases or redis)
+app.config['SESSION_TYPE'] = 'filesystem'
+
 @app.after_request
 def no_cache(response):
     """
@@ -96,7 +101,7 @@ def no_cache(response):
     response.headers["Expires"] = "0"
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
-# Connessione al database
+# Database Connection
 def create_conn():
     conn = mysql.connector.connect(host='piidatabaseserver.mysql.database.azure.com',
                                    database='pii',
@@ -105,8 +110,6 @@ def create_conn():
     return conn
 
 executor = ThreadPoolExecutor(max_workers=2)
-def check_pwned_password(password):
-    return pwnedpasswords.check(password)
 
 @app.route('/')
 def index():
@@ -123,7 +126,7 @@ def dashboard():
     else:
         return redirect(url_for('sign_in'))
 
-# Rotta per l'accesso tramite Google
+#GOOGLE LOGIN
 @app.route("/google_login")
 def google_login():
     if not google.authorized:
@@ -195,13 +198,7 @@ def choose_username():
             return str(e)  # You should handle the error more gracefully in production
 
     return render_template("choose_username.html")
-# Configura Flask-Mail
-app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'francesco.bongiovanni99@gmail.com'
-app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
-mail = Mail(app)
+
 
 @app.route("/reset_password", methods=["GET", "POST"])
 def reset_password():
@@ -212,13 +209,13 @@ def reset_password():
                 cursor.execute("SELECT * FROM Users WHERE email = %s", (email,))
                 account = cursor.fetchone()
                 if account:
-                    # Genera una nuova password casuale
+                    # Generate a new random password
                     new_password = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
                     hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
-                    # Aggiorna la password dell'utente nel database
+                    # Update the user's password in the database.
                     cursor.execute("UPDATE Users SET password = %s WHERE email = %s", (hashed_password, email))
                     conn.commit()
-                    # Invia la nuova password all'utente via email
+                    # Send the new password to the user via email.
                     msg = Message('Your password has been reset',
                                   sender='noreply@demo.com',
                                   recipients=[email])
@@ -237,7 +234,7 @@ def sign_up():
         "name": ""
     })
     if request.method == 'POST':
-        # Recupera i dati del modulo di registrazione
+        # Retrieve registration form data
         password = escape(request.form["password"])
         username = escape(request.form["username"])
         email = escape(request.form["email"])
@@ -249,30 +246,30 @@ def sign_up():
         }
         session['form_data'] = form_data
         
-        # Verifica se la password è stata utilizzata in precedenza in modo asincrono
+        # Check whether the password has been previously used asynchronously using a ThreadPoolExecutor to avoid blocking the main thread
         future = executor.submit(check_pwned_password, password)
 
-        # Verifica la lunghezza della password
+        # Check the length of the password
         if policy.test(password):
             flash("Password must be at least 12 characters long", "error")
-        # Verifica la forza della password
+        # Verify password strength
         if zxcvbn(password)['score'] < 3:
             flash("Password is too weak", "error")
-        # Verifica se la password è stata utilizzata in precedenza
-        # Verifica se l'username è composto solo da lettere minuscole e numeri
+        # Checks whether the password has been used before.
+        # Verifies whether the username consists of only lowercase letters and numbers.
         if not is_valid_username(username):
             print("Username must contain only lowercase letters and numbers")
             flash("Username must contain only lowercase letters and numbers", "error")
             return render_template("signup.html", message="Username must contain only lowercase letters and numbers", form_data=form_data)
         
-        # Recupera i dati del modulo di registrazione
+        # Retrieve registration form data
         user_data = {
             "username": request.form["username"],
             "password": bcrypt.generate_password_hash(request.form["password"]).decode('utf-8'),
             "email": request.form["email"],
             "name": request.form["name"]
         }
-        # Controlla se l'utente o l'email esistono già
+        # Check if the user or email already exists.
         try:
             print("Checking if user or email exists")
             with create_conn() as conn:
@@ -306,6 +303,8 @@ def sign_up():
 
 def is_valid_username(username):
     return all(c.islower() or c.isdigit() for c in username)
+def check_pwned_password(password):
+    return pwnedpasswords.check(password)
 #LOGIN   
 @app.route("/sign_in", methods=["GET","POST"])
 def sign_in():
@@ -436,7 +435,7 @@ def convert_text_to_anonimizedtext(user, name):
             documents = [txt]
             output_file = "anonimized_" + name + extension
 
-            # Eseguire il riconoscimento PII e redigere il testo
+            # Perform PII recognition and draft the redacted document
             try:
                 language_country = client.detect_language(documents, country_hint="us")[0]
                 language = language_country.primary_language['iso6391_name']
@@ -539,16 +538,16 @@ def pdf_to_string(blob_client):
 def pii_detection(documents, name, extension, file_blob, files_container):
     metadata_file = "metadata_" + name + ".json"
     response = client.recognize_pii_entities(documents, language="en")
-    confidence_scores = []  # Aggiungi una lista per salvare i punteggi di confidenza
+    confidence_scores = []  # List to save confidence scores
     metadata={}
     pii_found=False
-    categories_to_anonymize = ["Email", "PhoneNumber", "Address"]  # Aggiungi qui le categorie da anonimizzare
+    categories_to_anonymize = ["Email", "PhoneNumber", "Address"]  #  Add the categories to be anonymized here
     for doc in response:
         if not doc.is_error:
             for entity in doc.entities:
-                if entity.category in categories_to_anonymize:  # Controlla se la categoria dell'entità è da anonimizzare
+                if entity.category in categories_to_anonymize:  # Checks whether the entity category is to be anonymized
                     confidence_score = entity.confidence_score
-                    confidence_scores.append(confidence_score)  # Salva il punteggio di confidenza
+                    confidence_scores.append(confidence_score)  # Save confidence score to list
                     metadata[entity.text] = entity.category
                     pii_found = True
         else:
@@ -556,11 +555,11 @@ def pii_detection(documents, name, extension, file_blob, files_container):
     if not pii_found:
         return {}, "No PII found"
 
-    # Calcola il punteggio di confidenza medio e lo mostra a schermo
+    # Calculates the average confidence score and displays it on the page
     if confidence_scores:
-        # Estrai l'Average Confidence Score dai metadati, se esiste
+        # Extract the Average Confidence Score from the metadata, if it exists
         average_confidence_score = sum(confidence_scores) / len(confidence_scores)
-        #Dice il livello di confidenza
+        #Confidence level
         if average_confidence_score==0:
             text="No Risk"
         if average_confidence_score < 0.25:

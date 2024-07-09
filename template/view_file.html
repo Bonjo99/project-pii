@@ -9,36 +9,6 @@
     <link rel="stylesheet" href="/static/css/viewfile.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
 </head>
-<style>
-    #page-controls {
-    position: relative;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    background-color: transparent;
-    margin-top: 20px; /* Add a top margin */
-}
-
-
-    .button {
-        background-color: #f0f0f0; /* Grey background */
-        border: none; /* Remove border */
-        color: black; /* Black text */
-        padding: 10px 24px; /* Some padding */
-        text-align: center; /* Centered text */
-        text-decoration: none; /* Remove underline */
-        display: inline-block;
-        font-size: 16px; /* Change text size */
-        margin: 4px 2px; /* Some margin */
-        cursor: pointer; /* Mouse pointer on hover */
-        border-radius: 12px; /* Rounded corners */
-        transition-duration: 0.4s; /* Transition effect */
-    }
-    
-    .button:hover {
-        background-color: #e0e0e0; /* Darker grey background on hover */
-    }
-    </style>
 <body>
     <nav class="navbar navbar-dark bg-dark">
         <a href="{{ url_for('dashboard', username=username) }}" class="navbar-brand">
