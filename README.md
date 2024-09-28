@@ -1,4 +1,4 @@
-Introduction
+#Introduction
 This project is a web application aimed at detecting Personally Identifiable Information (PII) in various types of documents, including PDF and DOCX files. The application utilizes Azure Cognitive Services for text analysis, Flask for the web framework, and Azure Blob Storage for storing and managing documents.
 
 Features
