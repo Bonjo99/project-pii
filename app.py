@@ -46,8 +46,8 @@ app.secret_key = os.urandom(24)
 
 
 #config google
-app.config["GOOGLE_OAUTH_CLIENT_ID"] = "1086144218901-66r02mo1suk7qdibb6cijtgkrmrr8a9j.apps.googleusercontent.com"  # Google Client ID
-app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = "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"  #Google Client Secret
+app.config["GOOGLE_OAUTH_CLIENT_ID"] = ""  # Google Client ID
+app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = ""  #Google Client Secret
 google_bp = make_google_blueprint(
     client_id=app.config["GOOGLE_OAUTH_CLIENT_ID"],
     client_secret=app.config["GOOGLE_OAUTH_CLIENT_SECRET"],
@@ -58,11 +58,11 @@ google_bp = make_google_blueprint(
 app.register_blueprint(google_bp, url_prefix="/login")
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 bcrypt = Bcrypt(app)
-language_key = "523f45988b474bba8e9f474b8e97c4b0"
+language_key = ""
 language_endpoint = "https://piilanguagesistemi.cognitiveservices.azure.com/"
-user="piiadmin2024"
-db_password="ProgettoSistemi2024"
-blob_service_client = BlobServiceClient.from_connection_string('DefaultEndpointsProtocol=https;AccountName=piiprofilearchive;AccountKey=hsZDEcnQwHUAbqjD6moAbSmb0XeC6LXfuanPq9LT+ZFf/csxE/NdyQxKXSUNhKkWVytmQKAt142v+AStDJLWBw==;EndpointSuffix=core.windows.net')
+user=""
+db_password=""
+blob_service_client = BlobServiceClient.from_connection_string('')
 policy = PasswordPolicy.from_names(length
                                    =12,)
 
@@ -83,8 +83,8 @@ client = authenticate_client()
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'francesco.bongiovanni99@gmail.com'
-app.config['MAIL_PASSWORD'] = 'usac qqra ymbi idmk'
+app.config['MAIL_USERNAME'] = ''
+app.config['MAIL_PASSWORD'] = ''
 mail = Mail(app)
 
 
